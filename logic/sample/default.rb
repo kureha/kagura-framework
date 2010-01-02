@@ -10,7 +10,7 @@ module Sample
     end
     
     def self.get_day
-      Time.now.dayF
+      Time.now.day
     end
   end
 end
