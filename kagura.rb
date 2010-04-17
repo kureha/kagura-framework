@@ -84,22 +84,17 @@ module Kagura
   end
   
   #= Request class
-  class Request
-    def initialize(cgi, session, params, *arg)
-      @cgi = cgi
-      @session = session
-      @params = params
-      @logger = Kagura::Logger.new
-      
+  class StoreArea
+    def self.get_store(session, logger)
       # create pstore
-      if arg[0] == true
-        begin
-          @temp = PStore.new(File.join(BASE_DIR, "work", @session.session_id + ".dat"))
-        rescue
-          File.delete(File.join(BASE_DIR, "work", @session.session_id + ".dat"))
-          @temp = PStore.new(File.join(BASE_DIR, "work", @session.session_id + ".dat"))
-        end
+      begin
+        store = PStore.new(File.join(BASE_DIR, "work", session.session_id + ".dat"))
+      rescue => e
+        File.delete(File.join(BASE_DIR, "work", session.session_id + ".dat"))
+        store = PStore.new(File.join(BASE_DIR, "work", session.session_id + ".dat"))
+        logger.error "Re-create pstore area because : #{e}"
       end
+      store
     end
     
     attr_accessor :cgi, :session, :params, :temp
@@ -125,8 +120,8 @@ module Kagura
     cgi = CGI.new
     session = CGI::Session.new(cgi)
     params = Hash[*cgi.params.to_a.map{|k, v| [k, v[0].to_s]}.flatten]
-    request = Kagura::Request.new(cgi, session, params)
     logger = Kagura::Logger.get_logger(File.basename(cgi.script_name, ".*"))
+    store = StoreArea.get_store(session, logger)
     
     begin
       # get controller class name
@@ -158,10 +153,16 @@ module Kagura
       if action.respond_to?('run') and action.respond_to?('request')
         raise NoMethodError
       end
+      # send paramaters
+      action.cgi = cgi if action.respond_to? :cgi
+      action.session = session if action.respond_to? :session
+      action.params = params if action.respond_to? :params
+      action.logger = logger if action.respond_to? :logger
+      action.store = params if action.respond_to? :store
       # request method execute
-      action.run(request)
+      action.run()
       # get response
-      response = action.response(request)
+      response = action.response()
     rescue => evar
       logger.error("emerge error(message) : #{evar.message}")
       logger.error("emerge error(backtrace) : #{evar.backtrace.join("\n")}")
@@ -185,8 +186,8 @@ module Kagura
       logger.fatal("fatal error(message) : #{evar.message}")
       logger.fatal("fatal error(backtrace) : #{evar.backtrace.join("\n")}")
       puts "content-type: text/html\n\n<plaintext>\n" +
-       ("%s: %s (%s)\n" % [evar.backtrace[0], evar.message, evar.send('class')]) +
-      evar.backtrace[1..-1].join("<br>")
+        ("%s: %s (%s)\n" % [evar.backtrace[0], evar.message, evar.send('class')]) +
+        evar.backtrace[1..-1].join("\r\n")
     end
   end
 end

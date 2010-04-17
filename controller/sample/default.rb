@@ -7,12 +7,15 @@ module Sample
   class Default
     def initialize
     end
+
+    attr_accessor :cgi, :session, :params, :logger, :store
     
-    def run(request)
+    def run
       @time = Sample::Logic.get_time
+      @logger.debug "Time : #{@time}"
     end
     
-    def response(request)
+    def response
       erb = ERB.new(File.open("erb/sample/default.html.erb", "r:utf-8") {|f| f.read}, nil, "-")
       erb.result(binding)
     end
@@ -23,11 +26,13 @@ module Sample
     def initialize
     end
     
-    def run(request)
+    attr_accessor :cgi, :session, :params, :logger, :store
+    
+    def run
       @day = Sample::Logic.get_day
     end
     
-    def response(request)
+    def response
       erb = ERB.new(File.open("erb/sample/showday.html.erb", "r:utf-8") {|f| f.read}, nil, "-")
       erb.result(binding)
     end
