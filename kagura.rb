@@ -150,8 +150,8 @@ module Kagura
     # action area
     begin
       # check require method
-      if action.respond_to?('run') and action.respond_to?('request')
-        raise NoMethodError
+      unless action.respond_to?('run') and action.respond_to?('response')
+        raise NoMethodError("Require method is not found! : #run and #res")
       end
       # send paramaters
       action.cgi = cgi if action.respond_to? :cgi
